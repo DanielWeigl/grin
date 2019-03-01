@@ -29,6 +29,8 @@ use crate::core::core;
 use crate::keychain;
 
 use crate::error::{Error, ErrorKind};
+use crate::libwallet::types::OutputLockFn;
+use crate::Slate;
 use crate::{controller, display, HTTPNodeClient, WalletConfig, WalletInst, WalletSeed};
 use crate::{
 	FileWalletCommAdapter, HTTPWalletCommAdapter, KeybaseWalletCommAdapter, LMDBBackend,
@@ -205,6 +207,7 @@ pub struct SendArgs {
 	pub dest: String,
 	pub change_outputs: usize,
 	pub fluff: bool,
+	pub send_total_amount: bool, //send all currently spendable funds, ie. empty wallet
 }
 
 pub fn send(
@@ -231,14 +234,23 @@ pub fn send(
 				.collect();
 			display::estimate(args.amount, strategies, dark_scheme);
 		} else {
-			let result = api.initiate_tx(
-				None,
-				args.amount,
-				args.minimum_confirmations,
-				args.change_outputs,
-				args.selection_strategy == "all",
-				args.message.clone(),
-			);
+			let result = match args.send_total_amount {
+				true => api.initiate_send_all_funds_tx(
+					None,
+					args.minimum_confirmations,
+					args.change_outputs,
+					args.message.clone(),
+				),
+				false => api.initiate_tx(
+					None,
+					args.amount,
+					args.minimum_confirmations,
+					args.change_outputs,
+					args.selection_strategy == "all",
+					args.message.clone(),
+				),
+			};
+
 			let (mut slate, lock_fn) = match result {
 				Ok(s) => {
 					info!(

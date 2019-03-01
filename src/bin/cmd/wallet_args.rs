@@ -322,17 +322,33 @@ pub fn parse_account_args(account_args: &ArgMatches) -> Result<command::AccountA
 }
 
 pub fn parse_send_args(args: &ArgMatches) -> Result<command::SendArgs, ParseError> {
-	// amount
-	let amount = parse_required(args, "amount")?;
-	let amount = core::core::amount_from_hr_string(amount);
-	let amount = match amount {
-		Ok(a) => a,
-		Err(e) => {
-			let msg = format!(
-				"Could not parse amount as a number with optional decimal point. e={}",
-				e
-			);
-			return Err(ParseError::ArgumentError(msg));
+	// send_total_amount
+	let send_total = args.is_present("send_total_amount");
+	//let amount_val :u64 = 0;
+
+	let amount_val = match send_total {
+		false => {
+			let amount = parse_required(args, "amount")?;
+			let amount = core::core::amount_from_hr_string(amount);
+			match amount {
+				Ok(a) => a,
+				Err(e) => {
+					let msg = format!(
+						"Could not parse amount as a number with optional decimal point. e={}",
+						e
+					);
+					return Err(ParseError::ArgumentError(msg));
+				}
+			};
+			1u64;
+		}
+		true => {
+			if args.is_present("amount") {
+				return Err(ParseError::ArgumentError(String::from(
+					"Argument amount not allowed, if send_total_amount is active",
+				)));
+			}
+			0u64;
 		}
 	};
 
@@ -390,7 +406,7 @@ pub fn parse_send_args(args: &ArgMatches) -> Result<command::SendArgs, ParseErro
 	let fluff = args.is_present("fluff");
 
 	Ok(command::SendArgs {
-		amount: amount,
+		amount: amount_val,
 		message: message,
 		minimum_confirmations: min_c,
 		selection_strategy: selection_strategy.to_owned(),
@@ -399,6 +415,7 @@ pub fn parse_send_args(args: &ArgMatches) -> Result<command::SendArgs, ParseErro
 		dest: dest.to_owned(),
 		change_outputs: change_outputs,
 		fluff: fluff,
+		send_total_amount: send_total,
 	})
 }
 

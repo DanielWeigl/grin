@@ -663,6 +663,48 @@ where
 		Ok((slate, lock_fn))
 	}
 
+	pub fn initiate_send_all_funds_tx(
+		&mut self,
+		src_acct_name: Option<&str>,
+		minimum_confirmations: u64,
+		num_change_outputs: usize,
+		message: Option<String>,
+	) -> Result<(Slate, OutputLockFn<W, C, K>), Error> {
+		//let mut w = self.wallet.lock();
+		//w.open_with_credentials()?;
+
+		//		let parent_key_id = match src_acct_name {
+		//			Some(d) => {
+		//				let pm = w.get_acct_path(d.to_owned())?;
+		//				match pm {
+		//					Some(p) => p.path,
+		//					None => w.parent_key_id(),
+		//				}
+		//			}
+		//			None => w.parent_key_id(),
+		//		};
+
+		let (validated, wallet_info) = self.retrieve_summary_info(true, minimum_confirmations)?;
+
+		info!(
+			"Current total spendable amount: {}",
+			wallet_info.amount_currently_spendable
+		);
+
+		let full_amount = wallet_info.amount_currently_spendable;
+
+		return self.initiate_tx(
+			src_acct_name,
+			full_amount,
+			minimum_confirmations,
+			num_change_outputs,
+			true,
+			message,
+		);
+
+		// w.close()?;
+	}
+
 	/// Estimates the amount to be locked and fee for the transaction without creating one
 	///
 	/// # Arguments
